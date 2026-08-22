@@ -195,10 +195,11 @@ def update_employee_salary(
     db.commit()
     db.refresh(employee)
 
+    flat = compute_salary(employee.wage or 0)
     return {
+        **flat,  # wage, components, deductions, gross, net at top level
         "message": "Employee salary updated successfully",
         "employee_id": employee.id,
         "employee_code": employee.employee_code,
-        "wage": employee.wage,
-        "salary": compute_salary(employee.wage or 0),
+        "salary": flat,
     }
