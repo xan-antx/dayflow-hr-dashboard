@@ -1,16 +1,14 @@
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
 import PageHeader from '../../components/ui/PageHeader'
 import Table from '../../components/ui/Table'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import { api } from '../../api/client'
 
-const attendance = [
-  { employee_name: 'John Doe', employee_code: 'OIJODO20260001', date: '2026-08-22', check_in: '2026-08-22T09:02:00', check_out: '2026-08-22T18:32:00', work_hours: 9.47, extra_hours: 1.47, status: 'Present' },
-  { employee_name: 'Priya Nair', employee_code: 'OIJODO20260002', date: '2026-08-22', check_in: '2026-08-22T10:05:00', check_out: '2026-08-22T17:45:00', work_hours: 7.67, extra_hours: 0, status: 'Half-day' },
-  { employee_name: 'Amit Shah', employee_code: 'OIJODO20260003', date: '2026-08-22', check_in: null, check_out: null, work_hours: 0, extra_hours: 0, status: 'Leave' },
-  { employee_name: 'Sara Khan', employee_code: 'OIJODO20260004', date: '2026-08-22', check_in: null, check_out: null, work_hours: 0, extra_hours: 0, status: 'Absent' }
+const fallbackAttendance = [
+  { employee_name: 'No records', employee_code: '—', date: '', check_in: null, check_out: null, work_hours: 0, extra_hours: 0, status: 'Absent' }
 ]
 
 const formatClock = (value) => {
@@ -20,14 +18,47 @@ const formatClock = (value) => {
 }
 
 export default function Attendance(){
+  const [records, setRecords] = useState([])
+  const [employees, setEmployees] = useState([])
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10))
+  const [employeeFilter, setEmployeeFilter] = useState('')
+
+  useEffect(() => {
+    let active = true
+
+    async function loadData() {
+      try {
+        const employeeList = await api.employeesList().catch(() => [])
+        if (active) setEmployees(Array.isArray(employeeList) ? employeeList : [])
+
+        const params = {}
+        if (selectedDate) params.date = selectedDate
+        if (employeeFilter) params.employee_id = Number(employeeFilter)
+
+        const attendanceData = await api.attendanceAll(params).catch(() => [])
+        if (active) setRecords(Array.isArray(attendanceData) ? attendanceData : [])
+      } catch {
+        if (active) {
+          setEmployees([])
+          setRecords([])
+        }
+      }
+    }
+
+    loadData()
+    return () => { active = false }
+  }, [selectedDate, employeeFilter])
+
+  const employeeOptions = useMemo(() => [{ label: 'All employees', value: '' }, ...employees.map((employee) => ({ label: employee.name, value: String(employee.id) }))], [employees])
+
   return (
     <div style={{padding:24}}>
       <PageHeader title="Attendance" subtitle="Daily attendance overview for the organization" />
 
       <Card>
         <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',marginBottom:12}}>
-          <Input type="date" value="2026-08-22" style={{minWidth:170}} />
-          <Select options={['All employees', 'John Doe', 'Priya Nair', 'Amit Shah', 'Sara Khan']} value="All employees" style={{minWidth:180}} />
+          <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{minWidth:170}} />
+          <Select options={employeeOptions} value={employeeFilter} onChange={(e) => setEmployeeFilter(e.target.value)} style={{minWidth:180}} />
         </div>
 
         <Table
@@ -40,12 +71,12 @@ export default function Attendance(){
             { key: 'work_hours', label: 'Work hours' },
             { key: 'status', label: 'Status' }
           ]}
-          data={attendance.map((row) => ({
+          data={(records.length ? records : fallbackAttendance).map((row) => ({
             ...row,
             check_in: formatClock(row.check_in),
             check_out: formatClock(row.check_out),
             work_hours: row.work_hours ? `${row.work_hours}h` : '-',
-            status: <Badge status={row.status}>{row.status}</Badge>
+            status: <Badge status={row.status || 'Absent'}>{row.status || 'Absent'}</Badge>
           }))}
         />
       </Card>
