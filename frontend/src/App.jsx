@@ -30,4 +30,3 @@ function EmployeeApp({ session }) { const [page, setPage] = useState(window.loca
 function HRApp({ session }) { const [activeItem, setActiveItem] = useState('Dashboard'); function select(value) { if (value === 'Logout') { clearSession(); window.location.reload(); return } setActiveItem(value) }; const Page = hrRoutes[activeItem] || HRDashboard; return <AppShell activeItem={activeItem} items={[...Object.keys(hrRoutes), 'Logout']} onSelect={select}><Page session={session} /></AppShell> }
 
 export default function App() { const [session, setSession] = useState(getSession()); if (!session) return <Auth onLogin={setSession} />; return session.role === 'employee' && session.employee_id ? <EmployeeApp session={session} /> : <HRApp session={session} /> }
-*** End Patch

@@ -79,7 +79,7 @@ export const api = {
     }
     return request('/leaves', { method: 'POST', body: JSON.stringify({ leave_type, start_date, end_date, remarks }) });
   },
-  decideLeave: (id, body) => request(`/leaves/${id}/decision`, { method: 'PUT', body: JSON.stringify(body) }),
+  decideLeave: (id, body) => request(`/leaves/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
   salary: (id) => request(`/salary/${id}`),
   salaryOf: (id) => request(`/salary/${id}`),

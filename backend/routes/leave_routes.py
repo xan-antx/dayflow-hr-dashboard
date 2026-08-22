@@ -1,342 +1,277 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os
+from datetime import date, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_user, require_hr
 from ..database import get_db
-from ..models import Employee, SalaryConfig, User
-
+from ..models import Attendance, Employee, LeaveRequest, User
+from ..services.leave_logic import apply_approval, days_requested, validate_request
 
 router = APIRouter(
-    prefix="/salary",
-    tags=["Salary & Payroll"],
+    prefix="/leaves",
+    tags=["Leave Management"],
 )
 
-
-# =========================================================
-# HELPER — GET SALARY CONFIG
-# =========================================================
-
-def get_salary_config(db: Session):
-    config = db.query(SalaryConfig).first()
-
-    if not config:
-        config = SalaryConfig(
-            basic_pct_of_wage=0.50,
-            hra_pct_of_basic=0.50,
-            std_allowance_flat=4167,
-            perf_bonus_pct_of_wage=0.0833,
-            lta_pct_of_wage=0.0833,
-            pf_pct_of_basic=0.12,
-            professional_tax_flat=200,
-        )
-
-        db.add(config)
-        db.commit()
-        db.refresh(config)
-
-    return config
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 
 
 # =========================================================
-# HELPER — CALCULATE SALARY
+# EMPLOYEE — APPLY FOR LEAVE  (JSON or multipart w/ attachment)
 # =========================================================
 
-def calculate_salary(employee: Employee, config: SalaryConfig):
-
-    wage = float(employee.wage or 0)
-
-    # Earnings
-    basic = wage * config.basic_pct_of_wage
-
-    hra = basic * config.hra_pct_of_basic
-
-    standard_allowance = float(
-        config.std_allowance_flat or 0
-    )
-
-    performance_bonus = (
-        wage * config.perf_bonus_pct_of_wage
-    )
-
-    lta = wage * config.lta_pct_of_wage
-
-    gross_salary = (
-        basic
-        + hra
-        + standard_allowance
-        + performance_bonus
-        + lta
-    )
-
-    # Deductions
-    pf = basic * config.pf_pct_of_basic
-
-    professional_tax = float(
-        config.professional_tax_flat or 0
-    )
-
-    total_deductions = pf + professional_tax
-
-    net_salary = gross_salary - total_deductions
-
-    return {
-        "wage": round(wage, 2),
-
-        "earnings": {
-            "basic": round(basic, 2),
-            "hra": round(hra, 2),
-            "standard_allowance": round(
-                standard_allowance, 2
-            ),
-            "performance_bonus": round(
-                performance_bonus, 2
-            ),
-            "lta": round(lta, 2),
-        },
-
-        "gross_salary": round(
-            gross_salary, 2
-        ),
-
-        "deductions": {
-            "pf": round(pf, 2),
-            "professional_tax": round(
-                professional_tax, 2
-            ),
-        },
-
-        "total_deductions": round(
-            total_deductions, 2
-        ),
-
-        "net_salary": round(
-            net_salary, 2
-        ),
-    }
-
-
-# =========================================================
-# EMPLOYEE — VIEW OWN SALARY
-# =========================================================
-
-@router.get("/me")
-def get_my_salary(
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def apply_leave(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-
     if current_user.role != "employee":
-        raise HTTPException(
-            status_code=403,
-            detail="Employee access required",
-        )
-
+        raise HTTPException(status_code=403, detail="Only employees can apply for leave")
     if not current_user.employee_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Employee profile not linked",
-        )
+        raise HTTPException(status_code=400, detail="Employee profile not linked")
 
-    employee = (
-        db.query(Employee)
-        .filter(
-            Employee.id == current_user.employee_id
-        )
-        .first()
-    )
+    attachment_path = None
+    content_type = request.headers.get("content-type", "")
+    if content_type.startswith("multipart/form-data"):
+        form = await request.form()
+        leave_type = form.get("leave_type")
+        start_date = form.get("start_date")
+        end_date = form.get("end_date")
+        remarks = form.get("remarks")
+        upload = form.get("attachment")
+        if upload is not None and getattr(upload, "filename", None):
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
+            safe_name = f"leave_{current_user.employee_id}_{upload.filename}"
+            with open(os.path.join(UPLOAD_DIR, safe_name), "wb") as f:
+                f.write(await upload.read())
+            attachment_path = f"/uploads/{safe_name}"
+    else:
+        body = await request.json()
+        leave_type = body.get("leave_type")
+        start_date = body.get("start_date")
+        end_date = body.get("end_date")
+        remarks = body.get("remarks")
 
+    if not leave_type or not start_date or not end_date:
+        raise HTTPException(status_code=400, detail="leave_type, start_date and end_date are required")
+
+    try:
+        start = date.fromisoformat(str(start_date))
+        end = date.fromisoformat(str(end_date))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Dates must be in YYYY-MM-DD format")
+
+    employee = db.query(Employee).filter(Employee.id == current_user.employee_id).first()
     if not employee:
-        raise HTTPException(
-            status_code=404,
-            detail="Employee not found",
-        )
+        raise HTTPException(status_code=404, detail="Employee not found")
 
-    config = get_salary_config(db)
+    # services/leave_logic: validates type (Paid|Sick|Unpaid), range, and balance
+    balances = {"paid": employee.paid_leave_balance, "sick": employee.sick_leave_balance}
+    result = validate_request(leave_type, start, end, balances)
+    if not result["ok"]:
+        raise HTTPException(status_code=400, detail=result["error"])
 
-    salary = calculate_salary(
-        employee,
-        config,
+    leave_request = LeaveRequest(
+        employee_id=current_user.employee_id,
+        leave_type=leave_type,
+        start_date=start,
+        end_date=end,
+        remarks=remarks,
+        attachment=attachment_path,
+        status="Pending",
     )
+    db.add(leave_request)
+    db.commit()
+    db.refresh(leave_request)
 
     return {
-        "employee": {
-            "id": employee.id,
-            "employee_code": employee.employee_code,
-            "name": employee.name,
-            "department": employee.department,
-            "job_position": employee.job_position,
-        },
-        "salary": salary,
+        "id": leave_request.id,
+        "status": leave_request.status,
+        "days_requested": result["days"],
+        "leave_type": leave_request.leave_type,
+        "start_date": leave_request.start_date,
+        "end_date": leave_request.end_date,
     }
 
 
 # =========================================================
-# HR — VIEW ALL EMPLOYEE SALARIES
+# EMPLOYEE — VIEW OWN LEAVES  (contract shape: balances + requests)
 # =========================================================
 
-@router.get("/")
-def get_all_salaries(
-    current_user: User = Depends(require_hr),
+@router.get("/me")
+def get_my_leaves(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.role != "employee":
+        raise HTTPException(status_code=403, detail="Employee access required")
 
-    employees = (
-        db.query(Employee)
-        .order_by(Employee.id)
+    employee = db.query(Employee).filter(Employee.id == current_user.employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    leaves = (
+        db.query(LeaveRequest)
+        .filter(LeaveRequest.employee_id == current_user.employee_id)
+        .order_by(LeaveRequest.created_at.desc())
         .all()
     )
 
-    config = get_salary_config(db)
+    return {
+        "balances": {
+            "paid": employee.paid_leave_balance,
+            "sick": employee.sick_leave_balance,
+        },
+        "requests": [
+            {
+                "id": leave.id,
+                "leave_type": leave.leave_type,
+                "start_date": leave.start_date,
+                "end_date": leave.end_date,
+                "remarks": leave.remarks,
+                "attachment": leave.attachment,
+                "status": leave.status,
+                "admin_comment": leave.admin_comment,
+                "created_at": leave.created_at,
+            }
+            for leave in leaves
+        ],
+    }
+
+
+# =========================================================
+# HR — VIEW ALL LEAVES
+# =========================================================
+
+@router.get("/")
+def get_all_leaves(
+    status: str | None = None,
+    current_user: User = Depends(require_hr),
+    db: Session = Depends(get_db),
+):
+    query = db.query(LeaveRequest)
+    if status:
+        query = query.filter(LeaveRequest.status == status)
+    leaves = query.order_by(LeaveRequest.created_at.desc()).all()
 
     result = []
-
-    for employee in employees:
-
-        salary = calculate_salary(
-            employee,
-            config,
-        )
-
+    for leave in leaves:
+        employee = db.query(Employee).filter(Employee.id == leave.employee_id).first()
         result.append(
             {
-                "employee_id": employee.id,
-                "employee_code": employee.employee_code,
-                "employee_name": employee.name,
-                "department": employee.department,
-                "job_position": employee.job_position,
-                "salary": salary,
+                "id": leave.id,
+                "employee_id": leave.employee_id,
+                "employee_code": employee.employee_code if employee else None,
+                "employee_name": employee.name if employee else None,
+                "leave_type": leave.leave_type,
+                "start_date": leave.start_date,
+                "end_date": leave.end_date,
+                "remarks": leave.remarks,
+                "attachment": leave.attachment,
+                "status": leave.status,
+                "admin_comment": leave.admin_comment,
+                "created_at": leave.created_at,
             }
         )
-
-    return {
-        "items": result
-    }
+    return result
 
 
 # =========================================================
-# HR — VIEW SALARY OF ONE EMPLOYEE
+# HR — APPROVE / REJECT LEAVE
 # =========================================================
 
-@router.get("/employee/{employee_id}")
-def get_employee_salary(
-    employee_id: int,
+@router.patch("/{leave_id}")
+def update_leave_status(
+    leave_id: int,
+    leave_data: dict,
     current_user: User = Depends(require_hr),
     db: Session = Depends(get_db),
 ):
+    leave = db.query(LeaveRequest).filter(LeaveRequest.id == leave_id).first()
+    if not leave:
+        raise HTTPException(status_code=404, detail="Leave request not found")
 
-    employee = (
-        db.query(Employee)
-        .filter(Employee.id == employee_id)
-        .first()
-    )
+    new_status = leave_data.get("status") or leave_data.get("decision")
+    admin_comment = leave_data.get("admin_comment")
 
+    if new_status not in ["Approved", "Rejected"]:
+        raise HTTPException(status_code=400, detail="Status must be Approved or Rejected")
+    if leave.status != "Pending":
+        raise HTTPException(status_code=400, detail="Only pending leave requests can be updated")
+
+    employee = db.query(Employee).filter(Employee.id == leave.employee_id).first()
     if not employee:
-        raise HTTPException(
-            status_code=404,
-            detail="Employee not found",
-        )
+        raise HTTPException(status_code=404, detail="Employee not found")
 
-    config = get_salary_config(db)
+    if new_status == "Approved":
+        days = days_requested(leave.start_date, leave.end_date)
+        balances = {"paid": employee.paid_leave_balance, "sick": employee.sick_leave_balance}
+        try:
+            # services/leave_logic: deducts Paid/Sick correctly, Unpaid untouched
+            new_balances = apply_approval(leave.leave_type, days, balances)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        employee.paid_leave_balance = new_balances["paid"]
+        employee.sick_leave_balance = new_balances["sick"]
 
-    salary = calculate_salary(
-        employee,
-        config,
-    )
-
-    return {
-        "employee": {
-            "id": employee.id,
-            "employee_code": employee.employee_code,
-            "name": employee.name,
-            "email": employee.email,
-            "department": employee.department,
-            "job_position": employee.job_position,
-        },
-        "salary": salary,
-    }
-
-
-# =========================================================
-# HR — VIEW PAYROLL CONFIG
-# =========================================================
-
-@router.get("/config")
-def get_payroll_config(
-    current_user: User = Depends(require_hr),
-    db: Session = Depends(get_db),
-):
-
-    config = get_salary_config(db)
-
-    return {
-        "id": config.id,
-        "basic_pct_of_wage": config.basic_pct_of_wage,
-        "hra_pct_of_basic": config.hra_pct_of_basic,
-        "std_allowance_flat": config.std_allowance_flat,
-        "perf_bonus_pct_of_wage": config.perf_bonus_pct_of_wage,
-        "lta_pct_of_wage": config.lta_pct_of_wage,
-        "pf_pct_of_basic": config.pf_pct_of_basic,
-        "professional_tax_flat": config.professional_tax_flat,
-    }
-
-
-# =========================================================
-# HR — UPDATE PAYROLL CONFIG
-# =========================================================
-
-@router.patch("/config")
-def update_payroll_config(
-    data: dict,
-    current_user: User = Depends(require_hr),
-    db: Session = Depends(get_db),
-):
-
-    config = get_salary_config(db)
-
-    allowed_fields = [
-        "basic_pct_of_wage",
-        "hra_pct_of_basic",
-        "std_allowance_flat",
-        "perf_bonus_pct_of_wage",
-        "lta_pct_of_wage",
-        "pf_pct_of_basic",
-        "professional_tax_flat",
-    ]
-
-    for field in allowed_fields:
-
-        if field in data:
-            value = data[field]
-
-            try:
-                value = float(value)
-            except (TypeError, ValueError):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"{field} must be a number",
+        # mark attendance "Leave" for each day in the range (contract §3.5.2)
+        current = leave.start_date
+        while current <= leave.end_date:
+            record = (
+                db.query(Attendance)
+                .filter(
+                    Attendance.employee_id == employee.id,
+                    Attendance.date == current,
                 )
-
-            if value < 0:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"{field} cannot be negative",
+                .first()
+            )
+            if record:
+                record.status = "Leave"
+            else:
+                db.add(
+                    Attendance(
+                        employee_id=employee.id,
+                        date=current,
+                        status="Leave",
+                    )
                 )
+            current += timedelta(days=1)
 
-            setattr(config, field, value)
-
+    leave.status = new_status
+    leave.admin_comment = admin_comment
     db.commit()
-    db.refresh(config)
+    db.refresh(leave)
 
     return {
-        "message": "Payroll configuration updated successfully",
-        "config": {
-            "id": config.id,
-            "basic_pct_of_wage": config.basic_pct_of_wage,
-            "hra_pct_of_basic": config.hra_pct_of_basic,
-            "std_allowance_flat": config.std_allowance_flat,
-            "perf_bonus_pct_of_wage": config.perf_bonus_pct_of_wage,
-            "lta_pct_of_wage": config.lta_pct_of_wage,
-            "pf_pct_of_basic": config.pf_pct_of_basic,
-            "professional_tax_flat": config.professional_tax_flat,
-        },
+        "id": leave.id,
+        "status": leave.status,
+        "admin_comment": leave.admin_comment,
+    }
+
+
+# =========================================================
+# EMPLOYEE — VIEW LEAVE BALANCE (kept for compatibility)
+# =========================================================
+
+@router.get("/balance")
+def get_leave_balance(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "employee":
+        raise HTTPException(status_code=403, detail="Employee access required")
+    if not current_user.employee_id:
+        raise HTTPException(status_code=400, detail="Employee profile not linked")
+
+    employee = db.query(Employee).filter(Employee.id == current_user.employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    return {
+        "employee_code": employee.employee_code,
+        "employee_name": employee.name,
+        "paid_leave_balance": employee.paid_leave_balance,
+        "sick_leave_balance": employee.sick_leave_balance,
     }

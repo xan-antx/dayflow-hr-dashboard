@@ -104,9 +104,11 @@ def get_all_salaries(
 @router.get("/{employee_id}")
 def get_employee_salary(
     employee_id: int,
-    current_user: User = Depends(require_hr),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.role != "hr" and current_user.employee_id != employee_id:
+        raise HTTPException(status_code=403, detail="You can only view your own salary")
     employee = (
         db.query(Employee)
         .filter(Employee.id == employee_id)
