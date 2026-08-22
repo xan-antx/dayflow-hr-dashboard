@@ -1,10 +1,11 @@
 """Salary calculation from wage + configurable rates. Pure - no DB, no HTTP.
 
 Excalidraw spec: components auto-derive from wage; rates configurable,
-never hard-coded to the ₹50,000 example.
+never hard-coded to the 50,000 example.
   basic  = wage * basic_pct_of_wage
   hra    = basic * hra_pct_of_basic
-  fixed_allowance = wage - (sum of other components)  [floor 0]
+  standard_allowance = flat amount, capped at what remains of the wage
+  fixed_allowance    = remainder, so components always total the wage
   pf     = basic * pf_pct_of_basic (deduction)
   net    = wage - pf - professional_tax
 """
@@ -28,16 +29,17 @@ def compute_salary(wage: float, config: dict = None) -> dict:
 
     basic = wage * cfg["basic_pct_of_wage"]
     hra = basic * cfg["hra_pct_of_basic"]
-    std = cfg["std_allowance_flat"]
     bonus = wage * cfg["perf_bonus_pct_of_wage"]
     lta = wage * cfg["lta_pct_of_wage"]
-    named = basic + hra + std + bonus + lta
-    if named > wage:
-        raise ValueError("configured components exceed wage")
-    fixed = wage - named  # remainder so components always total the wage
+
+    # flat allowance is capped by what's left of the wage, so components
+    # always sum exactly to the wage at every wage level
+    remaining = max(0, wage - (basic + hra + bonus + lta))
+    std = min(cfg["std_allowance_flat"], remaining)
+    fixed = remaining - std
 
     pf = basic * cfg["pf_pct_of_basic"]
-    ptax = cfg["professional_tax_flat"]
+    ptax = min(cfg["professional_tax_flat"], wage)  # tax never exceeds tiny wages
 
     return {
         "wage": r(wage),

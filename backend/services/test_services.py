@@ -52,10 +52,8 @@ assert s["deductions"]["pf_employee"] == 3000.0
 assert s["net"] == 50000 - 3000 - 200
 total = sum(s["components"].values())
 assert abs(total - 50000) < 0.01  # components always sum to wage
-try:
-    compute_salary(5000); assert False  # flat allowance alone exceeds tiny wage
-except ValueError:
-    pass
+s_small = compute_salary(5000)  # small wages: flat allowance capped, never errors
+assert abs(sum(s_small["components"].values()) - 5000) < 0.01
 try:
     compute_salary(-1); assert False
 except ValueError:
