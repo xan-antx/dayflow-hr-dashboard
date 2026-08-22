@@ -182,8 +182,7 @@ def get_my_attendance(
         .all()
     )
 
-    return {
-        "items": [
+    return [
             {
                 "id": record.id,
                 "date": record.date,
@@ -195,7 +194,6 @@ def get_my_attendance(
             }
             for record in records
         ]
-    }
 
 
 # ---------------------------------------------------------
@@ -224,7 +222,8 @@ def get_all_attendance(
 
         result.append(
             {
-                "employee_id": employee.employee_code if employee else None,
+                "employee_id": record.employee_id,
+                "employee_code": employee.employee_code if employee else None,
                 "employee_name": employee.name if employee else None,
                 "date": record.date,
                 "check_in": record.check_in,
@@ -235,6 +234,4 @@ def get_all_attendance(
             }
         )
 
-    return {
-        "items": result
-    }
+    return result
