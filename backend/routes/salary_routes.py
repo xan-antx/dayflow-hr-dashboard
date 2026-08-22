@@ -123,7 +123,9 @@ def get_employee_salary(
 
     salary = compute_salary(employee.wage or 0)
 
+    flat = compute_salary(employee.wage or 0)
     return {
+        **flat,  # contract shape: wage, components, deductions, gross, net
         "employee": {
             "id": employee.id,
             "employee_code": employee.employee_code,
@@ -132,7 +134,14 @@ def get_employee_salary(
             "department": employee.department,
             "job_position": employee.job_position,
         },
-        "salary": salary,
+        "salary": {  # legacy envelope for any HR page reading it
+            "wage": flat["wage"],
+            "earnings": flat["components"],
+            "gross_salary": flat["gross"],
+            "deductions": flat["deductions"],
+            "total_deductions": round(sum(flat["deductions"].values()), 2),
+            "net_salary": flat["net"],
+        },
     }
 
 
