@@ -4,6 +4,16 @@ import {
   Clock3, FileText, Home, LogOut, Menu, Pencil, UserRound, WalletCards, X
 } from 'lucide-react';
 import { api, clearSession, getSession, saveSession } from './api/client';
+import Button from './components/ui/Button';
+import Card from './components/ui/Card';
+import PageHeader from './components/ui/PageHeader';
+import LoadingState from './components/ui/LoadingState';
+import EmptyState from './components/ui/EmptyState';
+import Badge from './components/ui/Badge';
+import Avatar from './components/ui/Avatar';
+import Table from './components/ui/Table';
+import Modal from './components/ui/Modal';
+import AppShell from './components/layout/AppShell';
 
 const navItems = [
   { path: 'dashboard', label: 'Dashboard', icon: Home },
@@ -30,23 +40,6 @@ function greeting() {
 }
 function errorText(error) { return error?.message || 'Unable to load this information. Please try again.'; }
 
-function Button({ children, variant = 'primary', icon: Icon, type = 'button', disabled = false, onClick }) {
-  return <button className={`button button-${variant}`} type={type} disabled={disabled} onClick={onClick}>{Icon && <Icon size={16} />}{children}</button>;
-}
-function Card({ children, className = '' }) { return <section className={`card ${className}`}>{children}</section>; }
-function PageHeader({ eyebrow, title, description, action }) { return <div className="page-header"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1>{description && <p className="page-description">{description}</p>}</div>{action}</div>; }
-function LoadingState() { return <div className="state-panel"><div className="spinner" /><p>Loading your Dayflow...</p></div>; }
-function EmptyState({ icon: Icon = FileText, children }) { return <div className="empty-state"><Icon size={22} /><p>{children}</p></div>; }
-function Badge({ status }) { const kind = { Present: 'success', Approved: 'success', Pending: 'warning', 'Half-day': 'warning', Absent: 'danger', Rejected: 'danger', Leave: 'neutral' }[status] || 'neutral'; return <span className={`badge badge-${kind}`}>{status}</span>; }
-function Avatar({ employee, size = 'md' }) { return employee?.profile_picture ? <img className={`avatar avatar-${size}`} src={employee.profile_picture} alt="" /> : <div className={`avatar avatar-${size}`}>{employee?.name?.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'DF'}</div>; }
-function Table({ headers, children }) { return <div className="table-wrap"><table><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div>; }
-function Modal({ title, children, onClose }) { return <div className="modal-backdrop"><div className="modal"><button className="icon-button modal-close" aria-label="Close" onClick={onClose}><X size={18} /></button><h2>{title}</h2>{children}</div></div>; }
-
-function Sidebar({ current, onNavigate, session, onLogout }) {
-  const [open, setOpen] = useState(false);
-  return <><button className="mobile-menu" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu size={20} /></button><aside className={`sidebar ${open ? 'sidebar-open' : ''}`}><div className="brand"><div className="brand-mark">D</div><div><strong>dayflow</strong><span>HR management</span></div><button className="icon-button sidebar-close" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={18} /></button></div><nav>{navItems.map(({ path, label, icon: Icon }) => <button key={path} className={`nav-item ${current === path ? 'active' : ''}`} onClick={() => { onNavigate(path); setOpen(false); }}><Icon size={19} />{label}</button>)}</nav><div className="sidebar-footer"><div className="profile-chip"><Avatar employee={session} size="sm" /><div><strong>{session.name}</strong><span>Employee</span></div></div><button className="logout" onClick={onLogout}><LogOut size={17} />Log out</button></div></aside>{open && <div className="sidebar-scrim" onClick={() => setOpen(false)} />}</>;
-}
-function AppShell({ current, onNavigate, session, onLogout, children }) { return <div className="app-shell"><Sidebar current={current} onNavigate={onNavigate} session={session} onLogout={onLogout} /><main className="main-content"><header className="topbar"><div className="topbar-crumb"><span>Workspace</span><ChevronRight size={14} /><strong>Employee portal</strong></div><div className="topbar-user"><span>{new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })}</span><Avatar employee={session} size="sm" /></div></header>{children}</main></div>; }
 
 function Auth({ onLogin }) {
   const [mode, setMode] = useState('login');

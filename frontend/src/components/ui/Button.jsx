@@ -20,7 +20,7 @@ const VARIANTS = {
   }
 }
 
-export default function Button({variant='primary', children, style, className, ...rest}){
+export default function Button({variant='primary', children, icon: Icon, style, className, ...rest}){
   const v = VARIANTS[variant] || VARIANTS.primary
   return (
     <button
@@ -28,6 +28,7 @@ export default function Button({variant='primary', children, style, className, .
       style={{background:v.background,color:v.color,border:v.border, ...style}}
       {...rest}
     >
+      {Icon && <Icon size={16} />}
       {children}
     </button>
   )

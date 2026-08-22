@@ -1,6 +1,9 @@
 import React from 'react'
 
-export default function Table({columns=[], data=[]}){
+export default function Table({columns=[], data=[], headers, children}){
+  if (headers) {
+    return <div className="table-wrap"><table style={{width:'100%',borderCollapse:'collapse',background:'var(--color-ivory)',border:'1px solid var(--border)'}}><thead><tr>{headers.map((header)=><th key={header} style={{textAlign:'left',padding:12,borderBottom:'1px solid var(--border)',color:'var(--text-secondary)'}}>{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div>
+  }
   if(!data || data.length===0){
     return <div className="df-card"><div className="muted">No data</div></div>
   }
