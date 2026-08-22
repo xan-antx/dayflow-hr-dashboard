@@ -3,7 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
 from . import models
-from .routes import auth_routes, employee_routes
+from .routes import (
+    auth_routes,
+    employee_routes,
+    attendance_routes,
+    leave_routes,
+)
 
 app = FastAPI(title="Dayflow HRMS")
 
@@ -27,6 +32,15 @@ app.include_router(
     prefix="/api",
 )
 
+app.include_router(
+    attendance_routes.router,
+    prefix="/api",
+)
+
+app.include_router(
+    leave_routes.router,
+    prefix="/api",
+)
 
 @app.get("/")
 def root():
