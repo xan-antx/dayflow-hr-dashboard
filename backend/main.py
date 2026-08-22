@@ -8,8 +8,9 @@ from .routes import (
     employee_routes,
     attendance_routes,
     leave_routes,
+    salary_routes,
+    activity_routes,
 )
-
 app = FastAPI(title="Dayflow HRMS")
 
 Base.metadata.create_all(bind=engine)
@@ -39,6 +40,15 @@ app.include_router(
 
 app.include_router(
     leave_routes.router,
+    prefix="/api",
+)
+app.include_router(
+    salary_routes.router,
+    prefix="/api",
+)
+
+app.include_router(
+    activity_routes.router,
     prefix="/api",
 )
 
