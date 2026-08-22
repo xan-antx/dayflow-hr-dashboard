@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -6,23 +6,52 @@ import PageHeader from '../../components/ui/PageHeader'
 import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import Select from '../../components/ui/Select'
+import { api } from '../../api/client'
 
-const leaveRequests = [
-  { id: 7, employee_id: 2, employee_name: 'Riya Nair', leave_type: 'Sick', start_date: '2026-08-24', end_date: '2026-08-26', remarks: 'Fever', attachment: null, status: 'Pending', admin_comment: null },
-  { id: 8, employee_id: 3, employee_name: 'Arjun Singh', leave_type: 'Paid', start_date: '2026-08-28', end_date: '2026-09-01', remarks: 'Family travel', attachment: null, status: 'Approved', admin_comment: 'Approved for family travel' },
-  { id: 9, employee_id: 4, employee_name: 'Meera Das', leave_type: 'Unpaid', start_date: '2026-09-02', end_date: '2026-09-02', remarks: 'Personal reason', attachment: null, status: 'Rejected', admin_comment: 'Rejected due to staffing constraints' }
+const fallbackLeaveRequests = [
+  { id: 0, employee_id: 0, employee_name: 'No requests', leave_type: '—', start_date: '', end_date: '', remarks: '', status: 'Pending', admin_comment: '' }
 ]
 
 export default function LeaveManagement(){
+  const [requests, setRequests] = useState([])
+  const [filter, setFilter] = useState('All requests')
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [comment, setComment] = useState('')
+
+  const loadRequests = async () => {
+    const status = filter === 'All requests' ? undefined : filter
+    try {
+      const data = await api.leavesAll(status).catch(() => [])
+      setRequests(Array.isArray(data) ? data : [])
+    } catch {
+      setRequests([])
+    }
+  }
+
+  useEffect(() => {
+    loadRequests()
+  }, [filter])
+
+  const handleDecision = async (decision) => {
+    if (!selected) return
+    try {
+      await api.decideLeave(selected.id, { decision, admin_comment: comment })
+      setOpen(false)
+      setSelected(null)
+      setComment('')
+      loadRequests()
+    } catch (err) {
+      alert(err.message || 'Unable to update leave request')
+    }
+  }
 
   return (
     <div style={{padding:24}}>
       <PageHeader title="Leave Management" subtitle="Review and decide leave requests" />
       <Card>
         <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}>
-          <Select options={['All requests', 'Pending', 'Approved', 'Rejected']} value="All requests" style={{minWidth:180}} />
+          <Select options={['All requests', 'Pending', 'Approved', 'Rejected']} value={filter} onChange={(e) => setFilter(e.target.value)} style={{minWidth:180}} />
         </div>
 
         <Table
@@ -34,11 +63,11 @@ export default function LeaveManagement(){
             { key: 'remarks', label: 'Remarks' },
             { key: 'status', label: 'Status' }
           ]}
-          data={leaveRequests.map((row) => ({
+          data={(requests.length ? requests : fallbackLeaveRequests).map((row) => ({
             ...row,
             status: <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <Badge status={row.status}>{row.status}</Badge>
-              <Button variant="ghost" onClick={() => { setSelected(row); setOpen(true) }}>Review</Button>
+              <Badge status={row.status || 'Pending'}>{row.status || 'Pending'}</Badge>
+              {row.id ? <Button variant="ghost" onClick={() => { setSelected(row); setComment(row.admin_comment || ''); setOpen(true) }}>Review</Button> : null}
             </div>
           }))}
         />
@@ -53,12 +82,13 @@ export default function LeaveManagement(){
             <div><strong>Remarks:</strong> {selected.remarks}</div>
             <textarea
               placeholder="Admin comment"
-              defaultValue={selected.admin_comment || ''}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
               style={{width:'100%',minHeight:90,padding:10,border:'1px solid var(--border)',borderRadius:8,resize:'vertical'}}
             />
             <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
-              <Button variant="danger" onClick={() => setOpen(false)}>Reject</Button>
-              <Button variant="primary" onClick={() => setOpen(false)}>Approve</Button>
+              <Button variant="danger" onClick={() => handleDecision('Rejected')}>Reject</Button>
+              <Button variant="primary" onClick={() => handleDecision('Approved')}>Approve</Button>
             </div>
           </div>
         )}

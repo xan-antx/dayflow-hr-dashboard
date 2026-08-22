@@ -46,7 +46,7 @@ def get_my_salary(
             detail="Employee not found",
         )
 
-    salary = compute_salary(employee)
+    salary = compute_salary(employee.wage or 0)
 
     return {
         "employee": {
