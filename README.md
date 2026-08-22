@@ -53,7 +53,7 @@ Both experiences operate on the same underlying system and data.
 
 Supported states:
 
-`Present` · `Absent` · `Half-day` · `Leave`
+`Present` · `Absents` · `Half-day` · `Leave`
 
 ### Leave Management
 
