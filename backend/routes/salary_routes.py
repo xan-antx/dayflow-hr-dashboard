@@ -79,7 +79,7 @@ def get_all_salaries(
     result = []
 
     for employee in employees:
-        salary = compute_salary(employee)
+        salary = compute_salary(employee.wage or 0)
 
         result.append(
             {
@@ -119,7 +119,7 @@ def get_employee_salary(
             detail="Employee not found",
         )
 
-    salary = compute_salary(employee)
+    salary = compute_salary(employee.wage or 0)
 
     return {
         "employee": {
@@ -189,5 +189,5 @@ def update_employee_salary(
         "employee_id": employee.id,
         "employee_code": employee.employee_code,
         "wage": employee.wage,
-        "salary": compute_salary(employee),
+        "salary": compute_salary(employee.wage or 0),
     }
