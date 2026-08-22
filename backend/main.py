@@ -1,0 +1,33 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .database import Base, engine
+from . import models
+from .routes import auth_routes, employee_routes
+
+app = FastAPI(title="Dayflow HRMS")
+
+Base.metadata.create_all(bind=engine)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(
+    auth_routes.router,
+    prefix="/api",
+)
+
+app.include_router(
+    employee_routes.router,
+    prefix="/api",
+)
+
+
+@app.get("/")
+def root():
+    return {"message": "Dayflow backend is running"}
