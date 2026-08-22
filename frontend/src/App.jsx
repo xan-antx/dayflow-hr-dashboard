@@ -111,8 +111,29 @@ function Salary({ session }) {
 }
 
 export default function App() {
-  const [session, setSession] = useState(getSession()); const [page, setPage] = useState(window.location.hash.replace('#/', '') || 'dashboard');
-  function navigate(path) { setPage(path); window.location.hash = `/${path}`; window.scrollTo(0, 0); }
+  const [session, setSession] = useState(getSession());
+  const allowedPages = navItems.map(({ path }) => path);
+  const getPageFromHash = () => {
+    const requestedPage = window.location.hash.replace(/^#\/?/, '');
+    return allowedPages.includes(requestedPage) ? requestedPage : 'dashboard';
+  };
+  const [page, setPage] = useState(getPageFromHash);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setPage(getPageFromHash());
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  function navigate(path) {
+    const nextPage = allowedPages.includes(path) ? path : 'dashboard';
+    setPage(nextPage);
+    window.location.hash = `/${nextPage}`;
+    window.scrollTo(0, 0);
+  }
   function logout() { clearSession(); setSession(null); }
   if (!session) return <Auth onLogin={setSession} />;
   if (session.role !== 'employee' || !session.employee_id) return <Auth onLogin={setSession} />;
