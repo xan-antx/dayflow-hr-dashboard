@@ -68,7 +68,7 @@ function Auth({ onLogin }) {
 function Dashboard({ session, onNavigate }) {
   const [data, setData] = useState({ employee: null, attendance: [], leaves: null, salary: null, activity: [] });
   const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [actionBusy, setActionBusy] = useState(false);
-  async function load() { setLoading(true); setError(''); try { const [employee, attendance, leaves, salary, activity] = await Promise.all([api.employee(session.employee_id), api.attendance('daily'), api.leaves(), api.salary(session.employee_id), api.activity()]); setData({ employee, attendance, leaves, salary, activity }); } catch (err) { setError(errorText(err)); } finally { setLoading(false); } }
+  async function load() { setLoading(true); setError(''); try { const [employee, attendance, leaves, salary, activity] = await Promise.all([api.employee(session.employee_id), api.attendance('daily'), api.leaves(), api.salary(session.employee_id), api.activity().catch(() => [])]); setData({ employee, attendance, leaves, salary, activity }); } catch (err) { setError(errorText(err)); } finally { setLoading(false); } }
   useEffect(() => { load(); }, []);
   async function attendanceAction() { setActionBusy(true); try { const today = data.attendance?.[0]; if (today?.check_in && !today?.check_out) await api.checkOut(); else await api.checkIn(); await load(); } catch (err) { setError(errorText(err)); } finally { setActionBusy(false); } }
   if (loading) return <><PageHeader eyebrow="Overview" title="Your day at a glance" /><LoadingState /></>;

@@ -22,8 +22,14 @@ async function request(path, options = {}) {
   if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   if (session?.token) headers.set('Authorization', `Bearer ${session.token}`);
 
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch {
+    throw new Error('Unable to reach Dayflow. Please check that the backend is running.');
+  }
   const payload = await response.json().catch(() => ({}));
+  if (response.status === 401) clearSession();
   if (!response.ok) throw new Error(payload.detail || 'Something went wrong. Please try again.');
   return payload;
 }
