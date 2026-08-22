@@ -19,9 +19,16 @@ Dayflow is a modern HR management platform designed to feel:
 
 The visual identity is based on:
 
-> Olive + Sand + Warm Cream + Terracotta
+> Deep Olive + Olive + Sand + Warm Cream + Ivory
 
-The interface should feel spacious and refined rather than dense.
+The interface should feel spacious, refined and understated rather than dense or overly decorative.
+
+The overall visual language should communicate:
+- Trust
+- Stability
+- Organization
+- Professionalism
+- Human-centered workplace management
 
 Avoid:
 - Bright startup gradients
@@ -32,15 +39,22 @@ Avoid:
 - Pure black backgrounds
 - Generic blue SaaS styling
 - Excessive use of accent colors
+- Unnecessary decorative colors
+- Rainbow-style dashboards
+- Excessive use of semantic colors
 
 The reference interface uses:
 - Dark olive navigation
 - Warm cream/sand workspace
 - Ivory content cards
 - Olive as the primary interactive color
-- Terracotta as a secondary accent
-- Muted gold for warnings/highlights
+- Soft olive for subtle highlights
+- Gold ONLY for warnings/pending states
+- Green ONLY for successful states
+- Muted red ONLY for errors/danger states
 - Restrained semantic colors
+
+The main brand palette must remain olive/cream/sand.
 
 ---
 
@@ -55,7 +69,9 @@ Use for:
 - Sidebar background
 - Dark navigation elements
 - Strong brand elements
-- Selected/active navigation backgrounds where appropriate
+- Dark buttons
+- Active navigation background where appropriate
+- High-emphasis brand elements
 
 ### Primary Olive
 `#626B45`
@@ -65,17 +81,21 @@ Use for:
 - Active navigation
 - Selected states
 - Important interactive elements
-- Links where appropriate
 - Primary icons
+- Links where appropriate
+- Main interactive controls
 
 ### Secondary Olive
 `#7A835F`
 
 Use sparingly for:
 - Secondary accents
-- Charts
+- Chart elements
 - Decorative indicators
 - Hover states
+- Secondary interactive elements
+
+Do not use Secondary Olive as the dominant brand color.
 
 ---
 
@@ -86,7 +106,9 @@ Use sparingly for:
 
 Use as the main application workspace background.
 
-This should be the dominant background color.
+This should be the dominant page background.
+
+The majority of the application should visually sit on this warm cream foundation.
 
 ### Secondary Background — Sand
 `#EDE4D3`
@@ -96,9 +118,12 @@ Use for:
 - Subtle panels
 - Selected filters
 - Highlighted areas
+- Secondary navigation areas
 - Empty states where appropriate
 
-Do NOT use sand as the primary page background.
+Do NOT use Sand as the dominant page background.
+
+Sand should be used to create subtle visual separation.
 
 ### Card Background — Ivory
 `#FFFDF8`
@@ -109,6 +134,7 @@ Use for:
 - Modals
 - Forms
 - Dashboard widgets
+- Employee panels
 
 Cards should remain visually distinct from the cream background without looking heavily bordered.
 
@@ -124,6 +150,7 @@ Use for:
 - Card headings
 - Important information
 - Table text
+- Primary labels
 
 ### Secondary Text
 `#777168`
@@ -142,6 +169,8 @@ Use for:
 - Captions
 - Disabled text
 - Very low-priority information
+- Timestamps
+- Secondary metadata
 
 ### Text on Dark Background
 `#FFFDF8`
@@ -153,29 +182,12 @@ Use on:
 
 ---
 
-# 5. ACCENT COLORS
-
-## Terracotta
-`#B66A55`
-
-Terracotta is the secondary brand accent.
-
-Use for:
-- Important secondary actions
-- Small visual accents
-- Notifications
-- Selected highlights
-- Certain icons
-- Important callouts
-
-Do NOT use terracotta for every button.
-
-Primary actions should remain olive.
-
----
+# 5. BRAND ACCENT COLORS
 
 ## Soft Olive
 `#E2E6D6`
+
+Soft Olive is the primary non-semantic supporting color.
 
 Use for:
 - Light olive backgrounds
@@ -183,26 +195,53 @@ Use for:
 - Icon containers
 - Hover backgrounds
 - Soft highlights
+- Secondary metric backgrounds
+- Subtle selected states
+
+Soft Olive should be preferred over introducing new decorative colors.
 
 ---
 
-## Gold
-`#C19A55`
+## Secondary Olive
+`#7A835F`
 
 Use for:
-- Warnings
-- Pending states
-- Important attention indicators
-- Calendar-related highlights
-- Secondary data visualization
+- Secondary icons
+- Charts
+- Decorative indicators
+- Secondary actions
+- Hover states
 
-Gold should be used sparingly.
+Use sparingly.
+
+---
+
+## IMPORTANT COLOR RULE
+
+Do NOT introduce additional decorative colors.
+
+The brand palette is intentionally limited to:
+
+- Deep Olive
+- Primary Olive
+- Secondary Olive
+- Soft Olive
+- Warm Cream
+- Sand
+- Ivory
+- Dark Brown/Charcoal neutrals
+
+Gold, green and red are semantic colors only.
 
 ---
 
 # 6. SEMANTIC COLORS
 
 Semantic colors must remain consistent throughout the entire application.
+
+These colors communicate system states and are NOT part of the primary brand identity.
+
+---
 
 ## Success
 
@@ -218,12 +257,15 @@ Used for:
 - Successful actions
 - Active/healthy states
 - Successful employee creation
+- Successful form submission
 
 Example:
 
 `Present`
 
 with a soft green background and dark green text.
+
+Do not use Success Green for decorative elements.
 
 ---
 
@@ -240,10 +282,13 @@ Used for:
 - On Leave
 - Awaiting approval
 - Attention required
+- Warnings
 
 Example:
 
 `Pending`
+
+Do not use Gold for general branding or decoration.
 
 ---
 
@@ -261,6 +306,9 @@ Used for:
 - Failed actions
 - Validation errors
 - Destructive actions
+- Delete actions
+
+Do not use Danger Red as a decorative color.
 
 ---
 
@@ -276,6 +324,7 @@ Used for:
 - Neutral states
 - Informational badges
 - Unspecified states
+- Non-critical information
 
 ---
 
@@ -291,6 +340,7 @@ Recommended:
 - Border radius: 6px
 - No heavy border
 - Use a light semantic background
+- Use semantic colors consistently
 
 ### Attendance
 
@@ -682,15 +732,17 @@ The sidebar is one of Dayflow's strongest visual elements.
 
 ### Active navigation
 
-Use:
+Background:
 
 `#626B45`
 
-with light text.
+Text:
+
+`#FFFDF8`
 
 ### Hover
 
-Use a slightly lighter olive overlay.
+Use a subtle lighter olive overlay.
 
 The sidebar should feel substantial but not overpowering.
 
