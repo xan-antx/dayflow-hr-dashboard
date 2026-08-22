@@ -3,27 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
 from . import models
-from .routes import (
-    auth_routes,
-    employee_routes,
-    attendance_routes,
-    leave_routes,
-    salary_routes,
-    activity_routes,
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 app = FastAPI(title="Dayflow HRMS")
 
 Base.metadata.create_all(bind=engine)
-
-from .database import SessionLocal
-from .models import User as _User
-_db = SessionLocal()
-if not _db.query(_User).first():
-    _db.close()
-    from .seed import seed as _seed
-    _seed()
-else:
-    _db.close()
 
 app.add_middleware(
     CORSMiddleware,
