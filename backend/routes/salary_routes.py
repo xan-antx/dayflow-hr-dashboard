@@ -6,14 +6,7 @@ from ..database import get_db
 from ..models import Employee, User
 from ..services.salary_calc import compute_salary
 
-from .routes import (
-    auth_routes,
-    employee_routes,
-    attendance_routes,
-    leave_routes,
-    salary_routes,
-    activity_routes,
-)
+
 router = APIRouter(
     prefix="/salary",
     tags=["Salary & Payroll"],
