@@ -332,7 +332,7 @@ compute_salary(wage, config) → { components..., deductions..., gross, net }
 
 ## 10. Frontend pages
 
-**Shared:** login, signup (+ mock verify step), top navbar (logo | Employees/Attendance/Time Off tabs | avatar menu: My Profile, Log Out — per Excalidraw).
+**Shared:** login, signup (+ mock verify step), left sidebar (per DESIGN_SYSTEM.md §17: Dashboard, Employees, Attendance, Leave Management, Payroll + user profile/logout)
 
 **Employee (P2):**
 - Dashboard: quick-access cards (Profile, Attendance, Leave Requests, Logout) + recent activity list (PDF §3.2.1)
@@ -341,7 +341,7 @@ compute_salary(wage, config) → { components..., deductions..., gross, net }
 - Time Off: balances (Paid/Sick), request form (type, date range, remarks, attachment), my requests with live status
 
 **HR (P3):**
-- Employee grid: cards (photo, name, position, dept) with **status dot — green=Present, yellow=Leave, red=Absent** (from `today_status`). Cards clickable → read-only profile view (Excalidraw). Search bar.
+- Employee grid: cards (photo, name, position, dept) with **status dot — `#557A5D`=Present, `#C19A55`=Leave, `#B96666`=Absent** (from `today_status`). Cards clickable → read-only profile view (Excalidraw). Search bar.
 - **+ New Employee** form → success modal showing generated **Employee ID + initial password** (the demo moment)
 - Attendance: all-employee table with date/employee filters
 - Leave approvals: pending list → Approve/Reject + comment
